@@ -1,5 +1,6 @@
 const std = @import("std");
 const read = @import("./read_file.zig");
+const util = @import("./utils.zig");
 
 pub const Info = struct {
     title: []const u8,
@@ -57,11 +58,12 @@ pub const Parser = struct {
                 if (line.len > 0) {
                     const alc = std.heap.page_allocator;
                     if (std.mem.startsWith(u8, line, ".")) {
+                        const ln = try util.replace(line, ".", "");
+                        defer alc.free(ln);
+
                         try self.body.appendSlice("<h2>");
-                        const ln = try replace(line, ".", "");
                         try self.body.appendSlice(ln);
                         try self.body.appendSlice("</h2>\n");
-                        defer alc.free(ln);
                     } else if (std.mem.eql(u8, line, "--")) {
                         try self.body.appendSlice("<hr>\n");
                     } else {
@@ -83,18 +85,6 @@ pub const Parser = struct {
         };
     }
 };
-
-fn replace(source: []const u8, from: []const u8, to: []const u8) ![]u8 {
-    const allocator = std.heap.page_allocator;
-    const replacement_count = std.mem.count(u8, source, from);
-    const new_len = source.len - (replacement_count * from.len) + (replacement_count * to.len);
-
-    const buffer = try allocator.alloc(u8, new_len);
-
-    _ = std.mem.replace(u8, source, from, to, buffer);
-
-    return buffer;
-}
 
 pub fn parse_file(path: []const u8) !Info {
     const stderr = std.io.getStdErr().writer();
