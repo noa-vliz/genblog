@@ -55,10 +55,15 @@ pub const Parser = struct {
             .body => {
                 // "."から始まる行は<h2>タグで囲み、それ以外は<p>タグで囲む
                 if (line.len > 0) {
+                    const alc = std.heap.page_allocator;
                     if (std.mem.startsWith(u8, line, ".")) {
                         try self.body.appendSlice("<h2>");
-                        try self.body.appendSlice(line);
+                        const ln = try replace(line, ".", "");
+                        try self.body.appendSlice(ln);
                         try self.body.appendSlice("</h2>\n");
+                        defer alc.free(ln);
+                    } else if (std.mem.eql(u8, line, "--")) {
+                        try self.body.appendSlice("<hr>\n");
                     } else {
                         try self.body.appendSlice("<p>");
                         try self.body.appendSlice(line);
@@ -78,6 +83,18 @@ pub const Parser = struct {
         };
     }
 };
+
+fn replace(source: []const u8, from: []const u8, to: []const u8) ![]u8 {
+    const allocator = std.heap.page_allocator;
+    const replacement_count = std.mem.count(u8, source, from);
+    const new_len = source.len - (replacement_count * from.len) + (replacement_count * to.len);
+
+    const buffer = try allocator.alloc(u8, new_len);
+
+    _ = std.mem.replace(u8, source, from, to, buffer);
+
+    return buffer;
+}
 
 pub fn parse_file(path: []const u8) !Info {
     const stderr = std.io.getStdErr().writer();
@@ -100,4 +117,3 @@ pub fn parse_file(path: []const u8) !Info {
 
     return parser.finalize();
 }
-
