@@ -54,10 +54,19 @@ pub const Parser = struct {
             .title_strings => try self.title.appendSlice(line),
             .date => try self.date.appendSlice(line),
             .body => {
-                // "."から始まる行は<h2>タグで囲み、それ以外は<p>タグで囲む
+                // "."から始まる行は<h2>タグで囲み、..は<h3>。--は<hr>。
+                // !から始まるものは<img>
+                // ![src="" alt=""]
                 if (line.len > 0) {
                     const alc = std.heap.page_allocator;
-                    if (std.mem.startsWith(u8, line, ".")) {
+                    if (std.mem.startsWith(u8, line, "..")) {
+                        const ln = try util.replace(line, "..", "");
+                        defer alc.free(ln);
+
+                        try self.body.appendSlice("<h3>");
+                        try self.body.appendSlice(ln);
+                        try self.body.appendSlice("</h3>\n");
+                    } else if (std.mem.startsWith(u8, line, ".")) {
                         const ln = try util.replace(line, ".", "");
                         defer alc.free(ln);
 
@@ -66,6 +75,12 @@ pub const Parser = struct {
                         try self.body.appendSlice("</h2>\n");
                     } else if (std.mem.eql(u8, line, "--")) {
                         try self.body.appendSlice("<hr>\n");
+                    } else if (std.mem.startsWith(u8, line, "!")) {
+                        var replaced = try util.replace(line, "!", "");
+                        replaced = try util.replace(replaced, "[", "<img ");
+                        replaced = try util.replace(replaced, "[", ">");
+                        defer alc.free(replaced);
+                        try self.body.appendSlice(replaced);
                     } else {
                         try self.body.appendSlice("<p>");
                         try self.body.appendSlice(line);

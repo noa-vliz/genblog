@@ -31,12 +31,7 @@ pub fn main() !void {
         std.process.exit(1);
     }
 
-    // template生成
-    // これ怒られるのホントZigくんやばい:
-    // if (std.mem.eql(u8, args[1], "--template") || std.mem.eql(u8, args[1], "--template")) {
-    // eqlは実行時に判別するから通るわけがないという
-    //
-    // わざわざ一時変数使うんだよね
+    // template生成フラグ
     const is_template = std.mem.eql(u8, args[1], "--template");
     const is_template2 = std.mem.eql(u8, args[1], "-t");
 
@@ -56,7 +51,6 @@ pub fn main() !void {
     }
 
     // version
-    // どうにかならんかね
     const is_version = std.mem.eql(u8, args[1], "--version");
     const is_version2 = std.mem.eql(u8, args[1], "-v");
 
