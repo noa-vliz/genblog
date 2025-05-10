@@ -1,0 +1,145 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers on version tags (e.g., v1.0.0)
+
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        default: 'v0.1.0'
+      prerelease:
+        description: 'Is this a pre-release?'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-alpine:
+    name: Build Alpine Linux
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Zig and deps
+        run: |
+          apk add --no-cache zig git
+          zig build -Drelease-safe
+          file zig-out/bin/genblog | grep "statically linked" || echo "Warning: Binary may not be statically linked"
+          tar -czf genblog-linux-musl-alpine.tar.gz -C zig-out/bin genblog
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: genblog-linux-musl-alpine
+          path: genblog-linux-musl-alpine.tar.gz
+
+  build-macos:
+    name: Build macOS (x86_64)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build with Zig
+        run: |
+          brew install zig
+          zig build -Drelease-safe
+          tar -czf genblog-macos-x86_64.tar.gz -C zig-out/bin genblog
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: genblog-macos-x86_64
+          path: genblog-macos-x86_64.tar.gz
+
+  release:
+    name: Create Release
+    needs: [build-alpine, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Get release tag
+        id: get_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "RELEASE_TAG=${{ github.event.inputs.release_tag }}" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=${{ github.event.inputs.prerelease }}" >> $GITHUB_ENV
+          else
+            echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=false" >> $GITHUB_ENV
+          fi
+
+      - name: Setup GitHub CLI
+        run: |
+          sudo apt update
+          sudo apt install -y gh
+
+      - name: Create Release Notes
+        run: |
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            COMMIT_MSG=$(git log -1 --format=%B ${{ env.RELEASE_TAG }})
+          else
+            COMMIT_MSG=$(git log -1 --format=%B)
+          fi
+          
+          cat > release_notes.md << EOL
+          # genblog ${{ env.RELEASE_TAG }}
+            
+          ## Downloads
+          - Linux (Alpine, musl static): genblog-linux-musl-alpine.tar.gz
+          - macOS (x86_64): genblog-macos-x86_64.tar.gz
+            
+          ## Changes
+          ${COMMIT_MSG}
+            
+          See the [README](https://github.com/${{ github.repository }}/blob/main/README.md) for usage.
+          EOL
+
+      - name: Create Release and Upload Assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            gh release create ${RELEASE_TAG} \
+              --title "Release ${RELEASE_TAG}" \
+              --notes-file release_notes.md \
+              genblog-linux-musl-alpine/genblog-linux-musl-alpine.tar.gz \
+              genblog-macos-x86_64/genblog-macos-x86_64.tar.gz
+          else
+            if gh release view ${RELEASE_TAG} &>/dev/null; then
+              echo "Release ${RELEASE_TAG} already exists, updating it"
+              gh release upload ${RELEASE_TAG} \
+                genblog-linux-musl-alpine/genblog-linux-musl-alpine.tar.gz \
+                genblog-macos-x86_64/genblog-macos-x86_64.tar.gz --clobber
+            else
+              PRERELEASE_FLAG=""
+              if [ "${IS_PRERELEASE}" = "true" ]; then
+                PRERELEASE_FLAG="--prerelease"
+              fi
+              
+              gh release create ${RELEASE_TAG} \
+                --title "Release ${RELEASE_TAG}" \
+                --notes-file release_notes.md \
+                ${PRERELEASE_FLAG} \
+                genblog-linux-musl-alpine/genblog-linux-musl-alpine.tar.gz \
+                genblog-macos-x86_64/genblog-macos-x86_64.tar.gz
+            fi
