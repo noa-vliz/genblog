@@ -30,10 +30,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install Zig and deps
+      - name: Install latest Zig
         run: |
-          apk add --no-cache zig git
-          zig build -Drelease-safe
+          apk add --no-cache curl tar xz
+          curl -LO https://ziglang.org/builds/zig-linux-x86_64.tar.xz
+          tar -xf zig-linux-x86_64.tar.xz
+          export PATH=$(pwd)/zig-linux-x86_64:$PATH
+          ./zig-linux-x86_64/zig build
           file zig-out/bin/genblog | grep "statically linked" || echo "Warning: Binary may not be statically linked"
           tar -czf genblog-linux-musl-alpine.tar.gz -C zig-out/bin genblog
 
@@ -50,10 +53,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build with Zig
+      - name: Install latest Zig
         run: |
-          brew install zig
-          zig build -Drelease-safe
+          curl -LO https://ziglang.org/builds/zig-macos-x86_64.tar.xz
+          tar -xf zig-macos-x86_64.tar.xz
+          export PATH=$(pwd)/zig-macos-x86_64:$PATH
+          ./zig-macos-x86_64/zig build
           tar -czf genblog-macos-x86_64.tar.gz -C zig-out/bin genblog
 
       - name: Upload build artifact
