@@ -64,14 +64,10 @@ For more information on the syntax, please see this blog post.
 
 ## Installation
 
-Zig is required.
 ```sh
-zig build
+make
 ```
-Or, to build directly: 
-```sh
-zig build-exe src/main.zig
-```
+
 
 ## License
 
