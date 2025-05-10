@@ -8,24 +8,40 @@ It avoids unnecessary styling, dependencies, and bloat, and aims to be lightweig
 
 - Outputs pure HTML 3.2.
 - Uses simple custom syntax.
-- Uses simple custom syntax, no CSS or JavaScript.
+- No CSS or JavaScript.
 - Works with most 2000s browsers.
 
 ## How to use
 
-To generate a blog page from a file with genblog syntax, run the following command.
+To generate a blog page from a file with genblog syntax, run the following command:
 
 ```sh 
-. /genblog <filename> 
+./genblog <filename> 
 ```
 
-blog.html will be generated.
+A file named `<filename>.html` will be generated.
 
-To output an empty template: 
+### Command line options
 
-. /genblog -t <filename>.
+```sh
+# Generate HTML from a file
+./genblog <filename>
+
+# Create an empty template file
+./genblog -t, --template <filename>
+
+# Use a custom template
+./genblog -w, --with-template <template> <file>
+
+# Show version information
+./genblog -v, --version
+
+# Show help message
+./genblog -h, --help
+```
 
 ## Supported syntax
+
 ```
 . Heading → <h2>
 
@@ -56,6 +72,11 @@ Or, to build directly:
 ```sh
 zig build-exe src/main.zig
 ```
+
+## License
+
+Based on the MIT license.
+See [LICENSE](./LICENSE) for details.
 
 ## License
 
