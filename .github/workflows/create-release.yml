@@ -32,22 +32,30 @@ jobs:
 
       - name: Install dependencies
         run: |
-          apk add --no-cache curl jq xz tar build-base git
+          apk add --no-cache curl jq xz tar build-base
 
       - name: Install latest Zig (Alpine)
         run: |
-          # Get latest Zig download URL
-          DOWNLOAD_URL=$(curl -s "https://ziglang.org/download/index.json" | jq -r 'to_entries | map(select(.key | startswith("0."))) | sort_by(.key) | reverse | .[0].value["x86_64-linux"].tarball')
+          # Get latest Zig download URL - updated to fetch the latest release
+          DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ziglang/zig/releases/latest | jq -r '.assets[] | select(.name | test("zig-linux-x86_64.*tar.xz")) | .browser_download_url')
+          
+          # If latest stable release doesn't have the asset, try the newest prerelease
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "Latest stable release not found, trying most recent release (including prereleases)..."
+            DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ziglang/zig/releases | jq -r 'sort_by(.published_at) | reverse | .[0].assets[] | select(.name | test("zig-linux-x86_64.*tar.xz")) | .browser_download_url')
+          fi
+          
           echo "Downloading Zig from: $DOWNLOAD_URL"
           
           # Download and extract Zig
           curl -L -o zig.tar.xz "$DOWNLOAD_URL"
           tar -xf zig.tar.xz
           DIR=$(find . -maxdepth 1 -type d -name "zig-*" | head -n1)
+          echo "Using Zig from directory: $DIR"
           
           # Build and package
           export PATH=$(pwd)/$DIR:$PATH
-          echo "Using Zig version: $($DIR/zig version)"
+          $DIR/zig version
           $DIR/zig build
           tar -czf genblog-linux-x86_64.tar.gz -C zig-out/bin genblog
 
