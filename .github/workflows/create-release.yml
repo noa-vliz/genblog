@@ -54,7 +54,7 @@ jobs:
       - name: Build on macOS
         run: |
           brew install curl
-          make macos-release
+          make mac-release
           tar -czf genblog-macos-x86_64.tar.gz ./zig-out/bin/genblog
 
       - name: Upload build artifact
