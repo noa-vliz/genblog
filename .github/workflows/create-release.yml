@@ -31,18 +31,18 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install latest Zig (Alpine)
-  run: |
-    curl -s https://api.github.com/repos/ziglang/zig/releases | \
-      jq -r '[.[] | select(.prerelease)][0].assets[] | select(.name | test("zig-linux-x86_64.*tar.xz")) | .browser_download_url' \
-      | head -n1 > zig_url.txt
+        run: |
+          curl -s https://api.github.com/repos/ziglang/zig/releases | \
+            jq -r '[.[] | select(.prerelease)][0].assets[] | select(.name | test("zig-linux-x86_64.*tar.xz")) | .browser_download_url' \
+            | head -n1 > zig_url.txt
 
-    curl -LO $(cat zig_url.txt)
-    FILENAME=$(basename $(cat zig_url.txt))
-    tar -xf "$FILENAME"
-    DIR=$(echo $FILENAME | sed 's/.tar.xz//')
-    export PATH=$(pwd)/$DIR:$PATH
-    ./$DIR/zig build
-    tar -czf genblog-linux-x86_64.tar.gz -C zig-out/bin genblog
+          curl -LO $(cat zig_url.txt)
+          FILENAME=$(basename $(cat zig_url.txt))
+          tar -xf "$FILENAME"
+          DIR=$(echo $FILENAME | sed 's/.tar.xz//')
+          export PATH=$(pwd)/$DIR:$PATH
+          ./$DIR/zig build
+          tar -czf genblog-linux-x86_64.tar.gz -C zig-out/bin genblog
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -58,18 +58,18 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install latest Zig (macOS)
-  run: |
-    curl -s https://api.github.com/repos/ziglang/zig/releases | \
-      jq -r '[.[] | select(.prerelease)][0].assets[] | select(.name | test("zig-macos-x86_64.*tar.xz")) | .browser_download_url' \
-      | head -n1 > zig_url.txt
+        run: |
+          curl -s https://api.github.com/repos/ziglang/zig/releases | \
+            jq -r '[.[] | select(.prerelease)][0].assets[] | select(.name | test("zig-macos-x86_64.*tar.xz")) | .browser_download_url' \
+            | head -n1 > zig_url.txt
 
-    curl -LO $(cat zig_url.txt)
-    FILENAME=$(basename $(cat zig_url.txt))
-    tar -xf "$FILENAME"
-    DIR=$(echo $FILENAME | sed 's/.tar.xz//')
-    export PATH=$(pwd)/$DIR:$PATH
-    ./$DIR/zig build -Drelease-safe
-    tar -czf genblog-macos-x86_64.tar.gz -C zig-out/bin genblog
+          curl -LO $(cat zig_url.txt)
+          FILENAME=$(basename $(cat zig_url.txt))
+          tar -xf "$FILENAME"
+          DIR=$(echo $FILENAME | sed 's/.tar.xz//')
+          export PATH=$(pwd)/$DIR:$PATH
+          ./$DIR/zig build -Drelease-safe
+          tar -czf genblog-macos-x86_64.tar.gz -C zig-out/bin genblog
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -120,7 +120,7 @@ jobs:
           # genblog ${{ env.RELEASE_TAG }}
             
           ## Downloads
-          - Linux (Alpine, musl static): genblog-linux-musl-alpine.tar.gz
+          - Linux (Alpine, musl static): genblog-linux-x86_64.tar.gz
           - macOS (x86_64): genblog-macos-x86_64.tar.gz
             
           ## Changes
@@ -137,13 +137,13 @@ jobs:
             gh release create ${RELEASE_TAG} \
               --title "Release ${RELEASE_TAG}" \
               --notes-file release_notes.md \
-              genblog-linux-musl-alpine/genblog-linux-musl-alpine.tar.gz \
+              genblog-linux-x86_64/genblog-linux-x86_64.tar.gz \
               genblog-macos-x86_64/genblog-macos-x86_64.tar.gz
           else
             if gh release view ${RELEASE_TAG} &>/dev/null; then
               echo "Release ${RELEASE_TAG} already exists, updating it"
               gh release upload ${RELEASE_TAG} \
-                genblog-linux-musl-alpine/genblog-linux-musl-alpine.tar.gz \
+                genblog-linux-x86_64/genblog-linux-x86_64.tar.gz \
                 genblog-macos-x86_64/genblog-macos-x86_64.tar.gz --clobber
             else
               PRERELEASE_FLAG=""
@@ -155,6 +155,7 @@ jobs:
                 --title "Release ${RELEASE_TAG}" \
                 --notes-file release_notes.md \
                 ${PRERELEASE_FLAG} \
-                genblog-linux-musl-alpine/genblog-linux-musl-alpine.tar.gz \
+                genblog-linux-x86_64/genblog-linux-x86_64.tar.gz \
                 genblog-macos-x86_64/genblog-macos-x86_64.tar.gz
             fi
+          fi
