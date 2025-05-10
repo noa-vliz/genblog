@@ -68,7 +68,7 @@ For more information on the syntax, please see this blog post.
 ```sh
 make linux-release
 ```
-### Windows
+### Windows (MinGW or MSVC)
 ```sh
 make windows-release
 ```
