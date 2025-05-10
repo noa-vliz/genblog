@@ -36,16 +36,19 @@ jobs:
 
       - name: Install latest Zig (Alpine)
         run: |
-          curl -s https://api.github.com/repos/ziglang/zig/releases | \
-            jq -r '[.[] | select(.prerelease)][0].assets[] | select(.name | test("zig-linux-x86_64.*tar.xz")) | .browser_download_url' \
-            | head -n1 > zig_url.txt
-
-          curl -LO $(cat zig_url.txt)
-          FILENAME=$(basename $(cat zig_url.txt))
+          # Get latest Zig download URL
+          DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ziglang/zig/releases | jq -r '[.[] | select(.prerelease)][0].assets[] | select(.name | test("zig-linux-x86_64.*tar.xz")) | .browser_download_url' | head -n1)
+          echo "Downloading Zig from: $DOWNLOAD_URL"
+          
+          # Download and extract Zig
+          curl -L -o zig.tar.xz "$DOWNLOAD_URL"
+          FILENAME="zig.tar.xz"
           tar -xf "$FILENAME"
-          DIR=$(echo $FILENAME | sed 's/.tar.xz//')
+          DIR=$(find . -maxdepth 1 -type d -name "zig-*" | head -n1)
+          
+          # Build and package
           export PATH=$(pwd)/$DIR:$PATH
-          ./$DIR/zig build
+          $DIR/zig build
           tar -czf genblog-linux-x86_64.tar.gz -C zig-out/bin genblog
 
       - name: Upload build artifact
@@ -128,8 +131,8 @@ jobs:
           # genblog ${{ env.RELEASE_TAG }}
             
           ## Downloads
-          - Linux (Alpine, musl static): genblog-linux-x86_64.tar.gz
-          - macOS (x86_64): genblog-macos-x86_64.tar.gz
+          - Linux (Alpine, musl static): [genblog-linux-x86_64.tar.gz](genblog-linux-x86_64.tar.gz)
+          - macOS (x86_64): [genblog-macos-x86_64.tar.gz](genblog-macos-x86_64.tar.gz)
             
           ## Changes
           ${COMMIT_MSG}
