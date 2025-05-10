@@ -34,7 +34,7 @@ jobs:
       - name: Build with Alpine
         run: |
           apk add --no-cache build-base git make curl
-          make linux-build
+          make linux-release
           file zig-out/bin/genblog | grep "statically linked" || echo "Warning: Binary may not be statically linked"
           tar -czf genblog-linux-x86_64-musl.tar.gz ./zig-out/bin/genblog
 
@@ -54,7 +54,7 @@ jobs:
       - name: Build on macOS
         run: |
           brew install curl
-          make
+          make macos-release
           tar -czf genblog-macos-x86_64.tar.gz ./zig-out/bin/genblog
 
       - name: Upload build artifact
