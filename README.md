@@ -64,8 +64,17 @@ For more information on the syntax, please see this blog post.
 
 ## Installation
 
+### Linux
 ```sh
 make linux-release
+```
+### Windows
+```sh
+make windows-release
+```
+### macOS
+```sh
+make mac-release
 ```
 
 
