@@ -30,15 +30,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install latest Zig
-        run: |
-          apk add --no-cache curl tar xz
-          curl -LO https://ziglang.org/builds/zig-linux-x86_64.tar.xz
-          tar -xf zig-linux-x86_64.tar.xz
-          export PATH=$(pwd)/zig-linux-x86_64:$PATH
-          ./zig-linux-x86_64/zig build
-          file zig-out/bin/genblog | grep "statically linked" || echo "Warning: Binary may not be statically linked"
-          tar -czf genblog-linux-musl-alpine.tar.gz -C zig-out/bin genblog
+      - name: Install latest Zig (macOS)
+  run: |
+    curl -s https://api.github.com/repos/ziglang/zig/releases | \
+      jq -r '[.[] | select(.prerelease)][0].assets[] | select(.name | test("zig-macos-x86_64.*tar.xz")) | .browser_download_url' \
+      | head -n1 > zig_url.txt
+
+    curl -LO $(cat zig_url.txt)
+    FILENAME=$(basename $(cat zig_url.txt))
+    tar -xf "$FILENAME"
+    DIR=$(echo $FILENAME | sed 's/.tar.xz//')
+    export PATH=$(pwd)/$DIR:$PATH
+    ./$DIR/zig build -Drelease-safe
+    tar -czf genblog-macos-x86_64.tar.gz -C zig-out/bin genblog
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
