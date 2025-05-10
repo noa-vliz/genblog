@@ -1,0 +1,154 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers on version tags (e.g., v1.0.0)
+
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        default: 'v0.1.0'
+      prerelease:
+        description: 'Is this a pre-release?'
+        required: false
+        type: boolean
+        default: false
+
+
+permissions:
+  contents: write
+
+jobs:
+  build-alpine:
+    name: Build Alpine Linux
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build with Alpine
+        run: |
+          apk add --no-cache build-base git make curl
+          make linux-build
+          file zig-out/bin/genblog | grep "statically linked" || echo "Warning: Binary may not be statically linked"
+          tar -czf genblog-linux-x86_64-musl.tar.gz ./zig-out/bin/genblog
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: genblog-linux-x86_64-musl 
+          path: genblog-linux-x86_64-musl.tar.gz
+
+  build-macos:
+    name: Build macOS (x86_64)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build on macOS
+        run: |
+          brew install curl
+          make
+          tar -czf genblog-macos-x86_64.tar.gz ./zig-out/bin/genblog
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: genblog-macos-x86_64
+          path: genblog-macos-x86_64.tar.gz
+
+  release:
+    name: Create Release
+    needs: [build-alpine, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Get release tag
+        id: get_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "RELEASE_TAG=${{ github.event.inputs.release_tag }}" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=${{ github.event.inputs.prerelease }}" >> $GITHUB_ENV
+          else
+            echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=false" >> $GITHUB_ENV
+          fi
+
+      - name: Setup GitHub CLI
+        run: |
+          type -p curl >/dev/null || sudo apt install curl -y
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+          && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+          && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+          && sudo apt update \
+          && sudo apt install gh -y
+
+      - name: Create Release Notes
+        run: |
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            COMMIT_MSG=$(git log -1 --format=%B ${{ env.RELEASE_TAG }})
+          else
+            COMMIT_MSG=$(git log -1 --format=%B)
+          fi
+          
+          cat > release_notes.md << EOL
+          # cinit ${{ env.RELEASE_TAG }}
+            
+          ## Downloads
+          - Linux: genblog-linux-x86_64-musl.tar.gz
+          - macOS (x86_64): genblog-macos-x86_64.tar.gz
+            
+          ## Changes
+          ${COMMIT_MSG}
+            
+          For more details, please check the [README](https://github.com/${{ github.repository }}/blob/main/README.md).
+          EOL
+
+      - name: Create Release and Upload Assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # For auto-triggered by tag push
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            gh release create ${RELEASE_TAG} \
+              --title "Release ${RELEASE_TAG}" \
+              --notes-file release_notes.md \
+              genblog-linux-x86_64-musl/genblog-linux-x86_64-musl.tar.gz \
+              genblog-macos-x86_64/genblog-macos-x86_64.tar.gz
+          else
+            # For manually triggered runs, check if the tag already exists
+            if gh release view ${RELEASE_TAG} &>/dev/null; then
+              echo "Release ${RELEASE_TAG} already exists, updating it"
+              gh release upload ${RELEASE_TAG} \
+                genblog-linux-x86_64-musl/genblog-linux-x86_64-musl.tar.gz \
+                genblog-macos-x86_64/genblog-macos-x86_64.tar.gz --clobber
+            else
+              # Create new release
+              PRERELEASE_FLAG=""
+              if [ "${IS_PRERELEASE}" = "true" ]; then
+                PRERELEASE_FLAG="--prerelease"
+              fi
+              
+              gh release create ${RELEASE_TAG} \
+                --title "Release ${RELEASE_TAG}" \
+                --notes-file release_notes.md \
+                ${PRERELEASE_FLAG} \
+                genblog-linux-x86_64-musl/genblog-linux-x86_64-musl.tar.gz \
+                genblog-macos-x86_64/genblog-macos-x86_64.tar.gz
+            fi
+          fi
