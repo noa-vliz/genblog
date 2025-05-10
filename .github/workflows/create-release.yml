@@ -32,22 +32,22 @@ jobs:
 
       - name: Install dependencies
         run: |
-          apk add --no-cache curl jq xz tar build-base
+          apk add --no-cache curl jq xz tar build-base git
 
       - name: Install latest Zig (Alpine)
         run: |
           # Get latest Zig download URL
-          DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ziglang/zig/releases | jq -r '[.[] | select(.prerelease)][0].assets[] | select(.name | test("zig-linux-x86_64.*tar.xz")) | .browser_download_url' | head -n1)
+          DOWNLOAD_URL=$(curl -s "https://ziglang.org/download/index.json" | jq -r 'to_entries | map(select(.key | startswith("0."))) | sort_by(.key) | reverse | .[0].value["x86_64-linux"].tarball')
           echo "Downloading Zig from: $DOWNLOAD_URL"
           
           # Download and extract Zig
           curl -L -o zig.tar.xz "$DOWNLOAD_URL"
-          FILENAME="zig.tar.xz"
-          tar -xf "$FILENAME"
+          tar -xf zig.tar.xz
           DIR=$(find . -maxdepth 1 -type d -name "zig-*" | head -n1)
           
           # Build and package
           export PATH=$(pwd)/$DIR:$PATH
+          echo "Using Zig version: $($DIR/zig version)"
           $DIR/zig build
           tar -czf genblog-linux-x86_64.tar.gz -C zig-out/bin genblog
 
@@ -70,16 +70,18 @@ jobs:
 
       - name: Install latest Zig (macOS)
         run: |
-          curl -s https://api.github.com/repos/ziglang/zig/releases | \
-            jq -r '[.[] | select(.prerelease)][0].assets[] | select(.name | test("zig-macos-x86_64.*tar.xz")) | .browser_download_url' \
-            | head -n1 > zig_url.txt
-
-          curl -LO $(cat zig_url.txt)
-          FILENAME=$(basename $(cat zig_url.txt))
-          tar -xf "$FILENAME"
-          DIR=$(echo $FILENAME | sed 's/.tar.xz//')
+          # Get latest Zig download URL
+          DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ziglang/zig/releases | jq -r '[.[] | select(.prerelease)][0].assets[] | select(.name | test("zig-macos-x86_64.*tar.xz")) | .browser_download_url' | head -n1)
+          echo "Downloading Zig from: $DOWNLOAD_URL"
+          
+          # Download and extract Zig
+          curl -L -o zig.tar.xz "$DOWNLOAD_URL"
+          tar -xf zig.tar.xz
+          DIR=$(find . -maxdepth 1 -type d -name "zig-*" | head -n1)
+          
+          # Build and package
           export PATH=$(pwd)/$DIR:$PATH
-          ./$DIR/zig build -Drelease-safe
+          $DIR/zig build -Drelease-safe
           tar -czf genblog-macos-x86_64.tar.gz -C zig-out/bin genblog
 
       - name: Upload build artifact
