@@ -30,6 +30,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install dependencies
+        run: |
+          apk add --no-cache curl jq xz tar build-base
+
       - name: Install latest Zig (Alpine)
         run: |
           curl -s https://api.github.com/repos/ziglang/zig/releases | \
@@ -56,6 +60,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          brew install jq
 
       - name: Install latest Zig (macOS)
         run: |
