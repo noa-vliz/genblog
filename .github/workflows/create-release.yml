@@ -30,6 +30,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install latest Zig (Alpine)
+  run: |
+    curl -s https://api.github.com/repos/ziglang/zig/releases | \
+      jq -r '[.[] | select(.prerelease)][0].assets[] | select(.name | test("zig-linux-x86_64.*tar.xz")) | .browser_download_url' \
+      | head -n1 > zig_url.txt
+
+    curl -LO $(cat zig_url.txt)
+    FILENAME=$(basename $(cat zig_url.txt))
+    tar -xf "$FILENAME"
+    DIR=$(echo $FILENAME | sed 's/.tar.xz//')
+    export PATH=$(pwd)/$DIR:$PATH
+    ./$DIR/zig build
+    tar -czf genblog-linux-x86_64.tar.gz -C zig-out/bin genblog
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: genblog-linux-x86_64
+          path: genblog-linux-x86_64.tar.gz
+
+  build-macos:
+    name: Build macOS (x86_64)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Install latest Zig (macOS)
   run: |
     curl -s https://api.github.com/repos/ziglang/zig/releases | \
@@ -43,27 +70,6 @@ jobs:
     export PATH=$(pwd)/$DIR:$PATH
     ./$DIR/zig build -Drelease-safe
     tar -czf genblog-macos-x86_64.tar.gz -C zig-out/bin genblog
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: genblog-linux-musl-alpine
-          path: genblog-linux-musl-alpine.tar.gz
-
-  build-macos:
-    name: Build macOS (x86_64)
-    runs-on: macos-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Install latest Zig
-        run: |
-          curl -LO https://ziglang.org/builds/zig-macos-x86_64.tar.xz
-          tar -xf zig-macos-x86_64.tar.xz
-          export PATH=$(pwd)/zig-macos-x86_64:$PATH
-          ./zig-macos-x86_64/zig build
-          tar -czf genblog-macos-x86_64.tar.gz -C zig-out/bin genblog
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
