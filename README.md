@@ -77,8 +77,3 @@ zig build-exe src/main.zig
 
 Based on the MIT license.
 See [LICENSE](./LICENSE) for details.
-
-## License
-
-Based on the MIT license.
-See [LICENSE](./LICENSE) for details.
