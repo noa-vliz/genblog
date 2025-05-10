@@ -27,11 +27,11 @@ A file named `<filename>.html` will be generated.
 # Generate HTML from a file
 ./genblog <filename>
 
-# Create an empty template file
+# Create an empty genblog template file
 ./genblog -t, --template <filename>
 
-# Use a custom template
-./genblog -w, --with-template <template> <file>
+# Use a custom html template
+./genblog -w, --with-template <template html> <file>
 
 # Show version information
 ./genblog -v, --version
