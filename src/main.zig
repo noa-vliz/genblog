@@ -5,6 +5,7 @@ const util = @import("utils.zig");
 const read_file = @import("read_file.zig");
 
 const template = @embedFile("include/templates/template");
+const license = @embedFile("include/LICENSE");
 const version_info = @embedFile("include/genblog_version");
 
 const Command = enum {
@@ -13,6 +14,7 @@ const Command = enum {
     use_template,
     show_version,
     show_help,
+    show_license,
 };
 
 const Options = struct {
@@ -37,6 +39,7 @@ fn print_usage(program_name: []const u8) !void {
     try stderr.print("  {s} -t, --template <file>     Create template file\n", .{program_name});
     try stderr.print("  {s} -w, --with-template <template> <file>  Use custom template\n", .{program_name});
     try stderr.print("  {s} -v, --version             Show version information\n", .{program_name});
+    try stderr.print("  {s} -l, --license             View full license\n", .{program_name});
     try stderr.print("  {s} -h, --help                Show this help message\n", .{program_name});
 }
 
@@ -88,6 +91,11 @@ fn parse_args(args: []const []const u8) !Options {
     // バージョン表示オプション
     if (std.mem.eql(u8, first_arg, "--version") or std.mem.eql(u8, first_arg, "-v")) {
         options.command = .show_version;
+        return options;
+    }
+
+    if (std.mem.eql(u8, first_arg, "--license") or std.mem.eql(u8, first_arg, "-l")) {
+        options.command = .show_license;
         return options;
     }
 
@@ -153,6 +161,9 @@ pub fn main() !void {
         },
         .show_help => {
             try print_usage(args[0]);
+        },
+        .show_license => {
+            std.debug.print("{s}\n", .{license});
         },
         .generate => {
             // 複数ファイルの処理をサポート
