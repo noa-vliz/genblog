@@ -107,7 +107,7 @@ jobs:
           fi
           
           cat > release_notes.md << EOL
-          # cinit ${{ env.RELEASE_TAG }}
+          # genblog ${{ env.RELEASE_TAG }}
             
           ## Downloads
           - Linux: genblog-linux-x86_64-musl.tar.gz
