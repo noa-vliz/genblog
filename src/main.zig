@@ -4,8 +4,8 @@ const gen_html = @import("gen_html.zig");
 const util = @import("utils.zig");
 const read_file = @import("read_file.zig");
 
-const template = @embedFile("./template_doc");
-const version_info = @embedFile("genblog_version");
+const template = @embedFile("include/templates/template");
+const version_info = @embedFile("include/genblog_version");
 
 const Command = enum {
     generate,

@@ -1,7 +1,7 @@
 const std = @import("std");
-const parser_import = @import("./parse.zig");
+const parser_import = @import("parse.zig");
 
-const default_template = @embedFile("./template.html");
+const default_template = @embedFile("include/templates/template.html");
 
 pub fn gen_html(info: parser_import.Info, template: ?[]const u8) ![]u8 {
     const stderr = std.io.getStdErr().writer();

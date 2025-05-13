@@ -1,6 +1,6 @@
 const std = @import("std");
-const read = @import("./read_file.zig");
-const util = @import("./utils.zig");
+const read = @import("read_file.zig");
+const util = @import("utils.zig");
 
 pub const Info = struct {
     title: []const u8,
